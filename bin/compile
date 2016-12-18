@@ -6,7 +6,7 @@ set -eo pipefail
 [ "$BUILDPACK_XTRACE" ] && set -o xtrace
 
 
-append-env() { echo "[[ \":\$$1:\" != *\":$2:\"* ]] && echo $1=\"\$$1:$2\"" >> $PROFILE_PATH; }
+append-env() { echo "[[ \":\$$1:\" != *\":$2:\"* ]] && export $1=\"\$$1:$2\"" >> $PROFILE_PATH; }
 
 # Paths
 BUILD_DIR=$1
@@ -14,7 +14,7 @@ TMP_DIR=/tmp/libopus
 SOURCE_TARBALL='http://downloads.xiph.org/releases/opus/opus-1.2-alpha.tar.gz'
 
 PROFILE_PATH="$BUILD_DIR/.profile.d/libopus.sh"
-OUT_PREFIX="$BUILD_DIR/.heroku/vendor/"
+OUT_PREFIX="$BUILD_DIR/.heroku/vendor"
 
 echo "Building libopus..."
 
@@ -32,7 +32,9 @@ mkdir -p $OUT_PREFIX
 make
 make install
 
-# Add environment hooks
-append-env PATH "$OUT_PREFIX/bin"
-append-env LIBRARY_PATH "$OUT_PREFIX/lib"
-append-env LD_LIBRARY_PATH "$OUT_PREFIX/lib"
+# Create .profile script for application runtime environment variables.
+#  Note that $BUILD_DIR (likely) points to a temporary directory.
+#  Official 'heroku-buildpack-python' hard-codes these paths, so I will too.
+append-env PATH '/app/.heroku/bin'
+append-env LIBRARY_PATH '/app/.heroku/lib'
+append-env LD_LIBRARY_PATH '/app/.heroku/lib'
