@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# bin/compile BUILD_DIR CACHE_DIR ENV_DIR
+
+# Fail fast and fail hard.
+set -eo pipefail
+[ "$BUILDPACK_XTRACE" ] && set -o xtrace
+
+
+append-env() { echo "[[ \":\$$1:\" != *\":$2:\"* ]] && echo $1=\"\$$1:$2\"" >> $PROFILE_PATH; }
+
+# Paths
+BUILD_DIR=$1
+TMP_DIR=/tmp/libopus
+SOURCE_TARBALL='http://downloads.xiph.org/releases/opus/opus-1.2-alpha.tar.gz'
+
+PROFILE_PATH="$BUILD_DIR/.profile.d/libopus.sh"
+OUT_PREFIX="$BUILD_DIR/.heroku/vendor/"
+
+echo "Building libopus..."
+
+# Create (empty) tmp directory
+[ -d $TMP_DIR ] && rm -r $TMP_DIR
+mkdir -p $TMP_DIR
+
+# Get sources
+curl -L $SOURCE_TARBALL | tar -zxv -C $TMP_DIR
+cd $TMP_DIR/*
+
+# Build
+mkdir -p $OUT_PREFIX
+./configure --prefix=$OUT_PREFIX --disable-static
+make
+make install
+
+# Add environment hooks
+append-env PATH "$OUT_PREFIX/bin"
+append-env LIBRARY_PATH "$OUT_PREFIX/lib"
+append-env LD_LIBRARY_PATH "$OUT_PREFIX/lib"
