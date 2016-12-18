@@ -5,36 +5,32 @@
 set -eo pipefail
 [ "$BUILDPACK_XTRACE" ] && set -o xtrace
 
+# Variables
+BP_NAME="libopus"
 
-append-env() { echo "[[ \":\$$1:\" != *\":$2:\"* ]] && export $1=\"\$$1:$2\"" >> $PROFILE_PATH; }
-
-# Paths
+BIN_DIR=$(cd $(dirname $0); pwd)
 BUILD_DIR=$1
-TMP_DIR=/tmp/libopus
+TMP_DIR="/tmp/$BP_NAME"
+VENDOR_DIR="$BUILD_DIR/.heroku/vendor"
+
 SOURCE_TARBALL='http://downloads.xiph.org/releases/opus/opus-1.2-alpha.tar.gz'
 
-PROFILE_PATH="$BUILD_DIR/.profile.d/libopus.sh"
-OUT_PREFIX="$BUILD_DIR/.heroku/vendor"
+echo "Building $BP_NAME..."
 
-echo "Building libopus..."
-
-# Create (empty) tmp directory
-[ -d $TMP_DIR ] && rm -r $TMP_DIR
-mkdir -p $TMP_DIR
-
-# Get sources
-curl -L $SOURCE_TARBALL | tar -zxv -C $TMP_DIR
-cd $TMP_DIR/*
+# Get source
+mkdir -p "$TMP_DIR"
+curl -L "$SOURCE_TARBALL" | tar -zxv --strip=1 -C "$TMP_DIR"
+cd "$TMP_DIR"
 
 # Build
-mkdir -p $OUT_PREFIX
-./configure --prefix=$OUT_PREFIX --disable-static
+./configure --prefix="$VENDOR_DIR" --disable-static
 make
 make install
 
-# Create .profile script for application runtime environment variables.
-#  Note that $BUILD_DIR (likely) points to a temporary directory.
-#  Official 'heroku-buildpack-python' hard-codes these paths, so I will too.
-append-env PATH '/app/.heroku/bin'
-append-env LIBRARY_PATH '/app/.heroku/lib'
-append-env LD_LIBRARY_PATH '/app/.heroku/lib'
+# Create .profile script for runtime environment
+PROFILE_PATH="$BUILD_DIR/.profile.d/$BP_NAME.sh"
+append-env() { echo "[[ \":\$$1:\" != *\":$2:\"* ]] && export $1=\"\$$1:$2\"" >> $PROFILE_PATH; }
+
+append-env PATH '/app/.heroku/vendor/bin'
+append-env LIBRARY_PATH '/app/.heroku/vendor/lib'
+append-env LD_LIBRARY_PATH '/app/.heroku/vendor/lib'

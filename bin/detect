@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # bin/detect BUILD_DIR
 
+# This buildpack is valid for all apps.
 echo "libopus"
 exit 0
